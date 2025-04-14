@@ -522,11 +522,47 @@ impl Hash for Control {
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 #[repr(u8)]
 pub enum MetaType {
+    SequenceNumber = 0,
+    TextEvent = 1,
+    Copyright = 2,
+    SequenceOrTrackName = 3,
+    InstrumentName = 4,
+    Lyric = 5,
+    Marker = 6,
+    CuePoint = 7,
+    ProgramName = 8,
+    DeviceName = 9,
+    ChannelPrefix = 0x20,
+    LegacyPort = 0x21,
+    EndOfTrack = 0x2F,
+    SetTempo = 0x51,
+    SmpteOffset = 0x54,
+    TimeSignature = 0x58,
+    KeySignature = 0x59,
+    SequencerSpecific = 0x7F,
     Other(U7),
 }
 impl MetaType {
     pub const fn from_base_type(value: U7) -> Self {
         match value.to_base_type() {
+            0 => Self::SequenceNumber,
+            1 => Self::TextEvent,
+            2 => Self::Copyright,
+            3 => Self::SequenceOrTrackName,
+            4 => Self::InstrumentName,
+            5 => Self::Lyric,
+            6 => Self::Marker,
+            7 => Self::CuePoint,
+            8 => Self::ProgramName,
+            9 => Self::DeviceName,
+            0x20 => Self::ChannelPrefix,
+            0x21 => Self::LegacyPort,
+            0x2F => Self::EndOfTrack,
+            0x51 => Self::SetTempo,
+            0x54 => Self::SmpteOffset,
+            0x58 => Self::TimeSignature,
+            0x59 => Self::KeySignature,
+            0x7F => Self::SequencerSpecific,
             128..=255 => unreachable!(),
             _ => Self::Other(value),
         }
@@ -534,6 +570,24 @@ impl MetaType {
 
     pub const fn to_base_type(&self) -> U7 {
         match self {
+            Self::SequenceNumber => U7::from_base_type(0),
+            Self::TextEvent => U7::from_base_type(1),
+            Self::Copyright => U7::from_base_type(2),
+            Self::SequenceOrTrackName => U7::from_base_type(3),
+            Self::InstrumentName => U7::from_base_type(4),
+            Self::Lyric => U7::from_base_type(5),
+            Self::Marker => U7::from_base_type(6),
+            Self::CuePoint => U7::from_base_type(7),
+            Self::ProgramName => U7::from_base_type(8),
+            Self::DeviceName => U7::from_base_type(9),
+            Self::ChannelPrefix => U7::from_base_type(0x20),
+            Self::LegacyPort => U7::from_base_type(0x21),
+            Self::EndOfTrack => U7::from_base_type(0x2F),
+            Self::SetTempo => U7::from_base_type(0x51),
+            Self::SmpteOffset => U7::from_base_type(0x54),
+            Self::TimeSignature => U7::from_base_type(0x58),
+            Self::KeySignature => U7::from_base_type(0x59),
+            Self::SequencerSpecific => U7::from_base_type(0x7F),
             Self::Other(value) => *value,
         }
     }
