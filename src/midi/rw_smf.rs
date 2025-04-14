@@ -5,10 +5,10 @@ use std::fmt;
 use std::io::{self, Read, Write};
 
 use crate::midi::model::{
-    ChannelValueMessage, ControlChangeMessage, Event, EventData, FileHeader, Message, MetaEventData,
-    MidiEventData, NoteMessage, PitchBendMessage, ProgramChangeMessage, SmfFormat, SongPositionData,
-    SongSelectData, SysExEventData, SystemEventData, StandardMidiFile, TimeCodeData, Track, U14, U3,
-    U4, U7,
+    ChannelValueMessage, Control, ControlChangeMessage, Event, EventData, FileHeader, Message,
+    MetaEventData, MetaType, MidiEventData, NoteMessage, PitchBendMessage, ProgramChangeMessage,
+    SmfFormat, SongPositionData, SongSelectData, SysExEventData, SystemEventData, StandardMidiFile,
+    TimeCodeData, Track, U14, U3, U4, U7,
 };
 
 
@@ -208,8 +208,9 @@ fn take_smf_event<'e, 'l>(slice: &'e [u8], last_event_byte: &'l mut Option<u8>) 
                     // control change
                     // two data bytes
                     let (slice, parameters): (_, [U7; 2]) = take_parameters(slice)?;
+                    let control = Control::from_base_type(parameters[0]);
                     let message = Message::ControlChange(ControlChangeMessage {
-                        control: parameters[0],
+                        control,
                         value: parameters[1],
                     });
                     (slice, message)
@@ -337,8 +338,9 @@ fn take_smf_event<'e, 'l>(slice: &'e [u8], last_event_byte: &'l mut Option<u8>) 
                 return Err(Error::MoreLengthThanData);
             }
             let (meta_slice, slice) = slice.split_at(length);
+            let meta_type = MetaType::from_base_type(params[0]);
             let data = EventData::Meta(MetaEventData {
-                meta_type: params[0],
+                meta_type,
                 data: meta_slice.to_owned(),
             });
             (slice, data)
@@ -481,7 +483,7 @@ fn write_smf_event<W: Write>(event: &Event, writer: &mut W, last_smf_event: &mut
                     let this_event = 0xB0 | u8::from(midi_event_data.channel);
                     let buf = [
                         this_event,
-                        control_change_message.control.into(),
+                        control_change_message.control.to_base_type().into(),
                         control_change_message.value.into(),
                     ];
                     if Some(this_event) == *last_smf_event {
@@ -607,7 +609,7 @@ fn write_smf_event<W: Write>(event: &Event, writer: &mut W, last_smf_event: &mut
             *last_smf_event = None;
             let buf = [
                 0xFF,
-                meta_event_data.meta_type.into(),
+                meta_event_data.meta_type.to_base_type().into(),
             ];
             writer.write_all(&buf)?;
             write_variable_length_quantity(meta_event_data.data.len().try_into().unwrap(), writer)?;

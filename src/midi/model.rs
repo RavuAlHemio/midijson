@@ -1,3 +1,6 @@
+use std::cmp::Ordering;
+use std::hash::{Hash, Hasher};
+
 use from_to_repr::from_to_other;
 use serde::{Deserialize, Serialize};
 
@@ -14,6 +17,9 @@ macro_rules! define_subint {
                 } else {
                     Self(value)
                 }
+            }
+            pub const fn to_base_type(&self) -> $subtype {
+                self.0
             }
         }
         impl TryFrom<$subtype> for $name {
@@ -153,7 +159,7 @@ pub struct SysExEventData {
 
 #[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub struct MetaEventData {
-    pub meta_type: U7,
+    pub meta_type: MetaType,
     // length: var_length_int,
     pub data: Vec<u8>,
 }
@@ -203,7 +209,7 @@ pub struct NoteMessage {
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub struct ControlChangeMessage {
-    pub control: U7,
+    pub control: Control,
     pub value: U7,
 }
 
@@ -241,4 +247,316 @@ pub struct SongSelectData {
 #[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub struct SystemData {
     pub data: Vec<u8>,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+#[repr(u8)]
+pub enum Control {
+    BankSelectMsb = 0,
+    ModulationMsb = 1,
+    BreathMsb = 2,
+    // 3 undefined
+    FootMsb = 4,
+    PortamentoTimeMsb = 5,
+    DataEntryMsb = 6,
+    ChannelVolumeMsb = 7,
+    BalanceMsb = 8,
+    // 9 undefined
+    PanMsb = 10,
+    ExpressionMsb = 11,
+    Effect1Msb = 12,
+    Effect2Msb = 13,
+    // 14-15 undefined
+    GeneralPurpose1Msb = 16,
+    GeneralPurpose2Msb = 17,
+    GeneralPurpose3Msb = 18,
+    GeneralPurpose4Msb = 19,
+    // 20-31 undefined
+    BankSelectLsb = 32,
+    ModulationLsb = 33,
+    BreathLsb = 34,
+    // 35 undefined
+    FootLsb = 36,
+    PortamentoTimeLsb = 37,
+    DataEntryLsb = 38,
+    ChannelVolumeLsb = 39,
+    BalanceLsb = 40,
+    // 41 undefined
+    PanLsb = 42,
+    ExpressionLsb = 43,
+    Effect1Lsb = 44,
+    Effect2Lsb = 45,
+    // 46-47 undefined
+    GeneralPurpose1Lsb = 48,
+    GeneralPurpose2Lsb = 49,
+    GeneralPurpose3Lsb = 50,
+    GeneralPurpose4Lsb = 51,
+    // 52-63 undefined
+    Sustain = 64,
+    Portamento = 65,
+    Sostenuto = 66,
+    SoftPedal = 67,
+    Legato = 68,
+    Hold2 = 69,
+    SoundController1 = 70,
+    SoundController2 = 71,
+    SoundController3 = 72,
+    SoundController4 = 73,
+    SoundController5 = 74,
+    SoundController6 = 75,
+    SoundController7 = 76,
+    SoundController8 = 77,
+    SoundController9 = 78,
+    SoundController10 = 79,
+    GeneralPurpose5 = 80,
+    GeneralPurpose6 = 81,
+    GeneralPurpose7 = 82,
+    GeneralPurpose8 = 83,
+    PortamentoControl = 84,
+    // 85-90 undefined
+    Effects1Depth = 91,
+    Effects2Depth = 92,
+    Effects3Depth = 93,
+    Effects4Depth = 94,
+    Effects5Depth = 95,
+    DataIncrement = 96,
+    DataDecrement = 97,
+    NonRegisteredParameterNumberLsb = 98,
+    NonRegisteredParameterNumberMsb = 99,
+    RegisteredParameterNumberLsb = 100,
+    RegisteredParameterNumberMsb = 101,
+    // 102-119 undefined
+    // now, the channel mode messages
+    AllSoundOff = 120,
+    ResetAllControllers = 121,
+    LocalControl = 122,
+    AllNotesOff = 123,
+    OmniModeOff = 124,
+    OmniModeOn = 125,
+    MonoModeOn = 126,
+    PolyModeOn = 127,
+    // 128-255 not allowed
+    Other(U7),
+}
+impl Control {
+    pub const fn from_base_type(value: U7) -> Self {
+        match value.to_base_type() {
+            0 => Self::BankSelectMsb,
+            1 => Self::ModulationMsb,
+            2 => Self::BreathMsb,
+            4 => Self::FootMsb,
+            5 => Self::PortamentoTimeMsb,
+            6 => Self::DataEntryMsb,
+            7 => Self::ChannelVolumeMsb,
+            8 => Self::BalanceMsb,
+            10 => Self::PanMsb,
+            11 => Self::ExpressionMsb,
+            12 => Self::Effect1Msb,
+            13 => Self::Effect2Msb,
+            16 => Self::GeneralPurpose1Msb,
+            17 => Self::GeneralPurpose2Msb,
+            18 => Self::GeneralPurpose3Msb,
+            19 => Self::GeneralPurpose4Msb,
+            32 => Self::BankSelectLsb,
+            33 => Self::ModulationLsb,
+            34 => Self::BreathLsb,
+            36 => Self::FootLsb,
+            37 => Self::PortamentoTimeLsb,
+            38 => Self::DataEntryLsb,
+            39 => Self::ChannelVolumeLsb,
+            40 => Self::BalanceLsb,
+            42 => Self::PanLsb,
+            43 => Self::ExpressionLsb,
+            44 => Self::Effect1Lsb,
+            45 => Self::Effect2Lsb,
+            48 => Self::GeneralPurpose1Lsb,
+            49 => Self::GeneralPurpose2Lsb,
+            50 => Self::GeneralPurpose3Lsb,
+            51 => Self::GeneralPurpose4Lsb,
+            64 => Self::Sustain,
+            65 => Self::Portamento,
+            66 => Self::Sostenuto,
+            67 => Self::SoftPedal,
+            68 => Self::Legato,
+            69 => Self::Hold2,
+            70 => Self::SoundController1,
+            71 => Self::SoundController2,
+            72 => Self::SoundController3,
+            73 => Self::SoundController4,
+            74 => Self::SoundController5,
+            75 => Self::SoundController6,
+            76 => Self::SoundController7,
+            77 => Self::SoundController8,
+            78 => Self::SoundController9,
+            79 => Self::SoundController10,
+            80 => Self::GeneralPurpose5,
+            81 => Self::GeneralPurpose6,
+            82 => Self::GeneralPurpose7,
+            83 => Self::GeneralPurpose8,
+            84 => Self::PortamentoControl,
+            91 => Self::Effects1Depth,
+            92 => Self::Effects2Depth,
+            93 => Self::Effects3Depth,
+            94 => Self::Effects4Depth,
+            95 => Self::Effects5Depth,
+            96 => Self::DataIncrement,
+            97 => Self::DataDecrement,
+            98 => Self::NonRegisteredParameterNumberLsb,
+            99 => Self::NonRegisteredParameterNumberMsb,
+            100 => Self::RegisteredParameterNumberLsb,
+            101 => Self::RegisteredParameterNumberMsb,
+            120 => Self::AllSoundOff,
+            121 => Self::ResetAllControllers,
+            122 => Self::LocalControl,
+            123 => Self::AllNotesOff,
+            124 => Self::OmniModeOff,
+            125 => Self::OmniModeOn,
+            126 => Self::MonoModeOn,
+            127 => Self::PolyModeOn,
+            128..=255 => unreachable!(),
+            _ => Self::Other(value),
+        }
+    }
+
+    pub const fn to_base_type(&self) -> U7 {
+        match self {
+            Self::BankSelectMsb => U7::from_base_type(0),
+            Self::ModulationMsb => U7::from_base_type(1),
+            Self::BreathMsb => U7::from_base_type(2),
+            Self::FootMsb => U7::from_base_type(4),
+            Self::PortamentoTimeMsb => U7::from_base_type(5),
+            Self::DataEntryMsb => U7::from_base_type(6),
+            Self::ChannelVolumeMsb => U7::from_base_type(7),
+            Self::BalanceMsb => U7::from_base_type(8),
+            Self::PanMsb => U7::from_base_type(10),
+            Self::ExpressionMsb => U7::from_base_type(11),
+            Self::Effect1Msb => U7::from_base_type(12),
+            Self::Effect2Msb => U7::from_base_type(13),
+            Self::GeneralPurpose1Msb => U7::from_base_type(16),
+            Self::GeneralPurpose2Msb => U7::from_base_type(17),
+            Self::GeneralPurpose3Msb => U7::from_base_type(18),
+            Self::GeneralPurpose4Msb => U7::from_base_type(19),
+            Self::BankSelectLsb => U7::from_base_type(32),
+            Self::ModulationLsb => U7::from_base_type(33),
+            Self::BreathLsb => U7::from_base_type(34),
+            Self::FootLsb => U7::from_base_type(36),
+            Self::PortamentoTimeLsb => U7::from_base_type(37),
+            Self::DataEntryLsb => U7::from_base_type(38),
+            Self::ChannelVolumeLsb => U7::from_base_type(39),
+            Self::BalanceLsb => U7::from_base_type(40),
+            Self::PanLsb => U7::from_base_type(42),
+            Self::ExpressionLsb => U7::from_base_type(43),
+            Self::Effect1Lsb => U7::from_base_type(44),
+            Self::Effect2Lsb => U7::from_base_type(45),
+            Self::GeneralPurpose1Lsb => U7::from_base_type(48),
+            Self::GeneralPurpose2Lsb => U7::from_base_type(49),
+            Self::GeneralPurpose3Lsb => U7::from_base_type(50),
+            Self::GeneralPurpose4Lsb => U7::from_base_type(51),
+            Self::Sustain => U7::from_base_type(64),
+            Self::Portamento => U7::from_base_type(65),
+            Self::Sostenuto => U7::from_base_type(66),
+            Self::SoftPedal => U7::from_base_type(67),
+            Self::Legato => U7::from_base_type(68),
+            Self::Hold2 => U7::from_base_type(69),
+            Self::SoundController1 => U7::from_base_type(70),
+            Self::SoundController2 => U7::from_base_type(71),
+            Self::SoundController3 => U7::from_base_type(72),
+            Self::SoundController4 => U7::from_base_type(73),
+            Self::SoundController5 => U7::from_base_type(74),
+            Self::SoundController6 => U7::from_base_type(75),
+            Self::SoundController7 => U7::from_base_type(76),
+            Self::SoundController8 => U7::from_base_type(77),
+            Self::SoundController9 => U7::from_base_type(78),
+            Self::SoundController10 => U7::from_base_type(79),
+            Self::GeneralPurpose5 => U7::from_base_type(80),
+            Self::GeneralPurpose6 => U7::from_base_type(81),
+            Self::GeneralPurpose7 => U7::from_base_type(82),
+            Self::GeneralPurpose8 => U7::from_base_type(83),
+            Self::PortamentoControl => U7::from_base_type(84),
+            Self::Effects1Depth => U7::from_base_type(91),
+            Self::Effects2Depth => U7::from_base_type(92),
+            Self::Effects3Depth => U7::from_base_type(93),
+            Self::Effects4Depth => U7::from_base_type(94),
+            Self::Effects5Depth => U7::from_base_type(95),
+            Self::DataIncrement => U7::from_base_type(96),
+            Self::DataDecrement => U7::from_base_type(97),
+            Self::NonRegisteredParameterNumberLsb => U7::from_base_type(98),
+            Self::NonRegisteredParameterNumberMsb => U7::from_base_type(99),
+            Self::RegisteredParameterNumberLsb => U7::from_base_type(100),
+            Self::RegisteredParameterNumberMsb => U7::from_base_type(101),
+            Self::AllSoundOff => U7::from_base_type(120),
+            Self::ResetAllControllers => U7::from_base_type(121),
+            Self::LocalControl => U7::from_base_type(122),
+            Self::AllNotesOff => U7::from_base_type(123),
+            Self::OmniModeOff => U7::from_base_type(124),
+            Self::OmniModeOn => U7::from_base_type(125),
+            Self::MonoModeOn => U7::from_base_type(126),
+            Self::PolyModeOn => U7::from_base_type(127),
+            Self::Other(value) => *value,
+        }
+    }
+}
+impl PartialEq for Control {
+    fn eq(&self, other: &Self) -> bool {
+        self.to_base_type() == other.to_base_type()
+    }
+}
+impl Eq for Control {
+}
+impl Ord for Control {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.to_base_type().cmp(&other.to_base_type())
+    }
+}
+impl PartialOrd for Control {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Hash for Control {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.to_base_type().hash(state);
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+#[repr(u8)]
+pub enum MetaType {
+    Other(U7),
+}
+impl MetaType {
+    pub const fn from_base_type(value: U7) -> Self {
+        match value.to_base_type() {
+            128..=255 => unreachable!(),
+            _ => Self::Other(value),
+        }
+    }
+
+    pub const fn to_base_type(&self) -> U7 {
+        match self {
+            Self::Other(value) => *value,
+        }
+    }
+}
+impl PartialEq for MetaType {
+    fn eq(&self, other: &Self) -> bool {
+        self.to_base_type() == other.to_base_type()
+    }
+}
+impl Eq for MetaType {
+}
+impl Ord for MetaType {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.to_base_type().cmp(&other.to_base_type())
+    }
+}
+impl PartialOrd for MetaType {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Hash for MetaType {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.to_base_type().hash(state);
+    }
 }
