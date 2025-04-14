@@ -4,5 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+clap = { version = "4.5.36", features = ["derive"] }
 from-to-repr = { version = "0.2.2", features = ["from_to_other"] }
 serde = { version = "1.0.219", features = ["derive"] }
+serde_json = { version = "1.0" }

@@ -4,8 +4,18 @@ use serde::{Deserialize, Serialize};
 
 macro_rules! define_subint {
     ($name:ident, $subtype:ty, $max_val:expr) => {
-        #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+        #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
         pub struct $name($subtype);
+        impl $name {
+            pub const fn zero() -> Self { Self(0) }
+            pub const fn from_base_type(value: $subtype) -> Self {
+                if value > $max_val {
+                    panic!("value too large");
+                } else {
+                    Self(value)
+                }
+            }
+        }
         impl TryFrom<$subtype> for $name {
             type Error = $subtype;
             fn try_from(value: $subtype) -> Result<Self, Self::Error> {
@@ -28,6 +38,25 @@ define_subint!(U3, u8, 0b111);
 define_subint!(U4, u8, 0b1111);
 define_subint!(U7, u8, 0b111_1111);
 define_subint!(U14, u16, 0b11_1111_1111_1111);
+
+impl U14 {
+    pub const fn to_lsb_msb(&self) -> (U7, U7) {
+        let lsb_big = (self.0 >> 0) & 0b0111_1111;
+        let msb_big = (self.0 >> 7) & 0b0111_1111;
+        assert!(lsb_big < 0b1000_0000);
+        assert!(msb_big < 0b1000_0000);
+
+        let lsb = lsb_big as u8;
+        assert!(lsb & 0b1000_0000 == 0);
+        let msb = msb_big as u8;
+        assert!(msb & 0b1000_0000 == 0);
+
+        let lsb_u7 = U7::from_base_type(lsb);
+        let msb_u7 = U7::from_base_type(msb);
+
+        (lsb_u7, msb_u7)
+    }
+}
 
 
 #[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -59,11 +88,12 @@ pub struct Track {
 
 #[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub struct Event {
-    pub delta_time: u128,
+    pub delta_time: u32,
     pub data: EventData,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(tag = "type")]
 pub enum EventData {
     Midi(MidiEventData),
     System(SystemEventData),
@@ -123,7 +153,7 @@ pub struct SysExEventData {
 
 #[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub struct MetaEventData {
-    pub meta_type: u8,
+    pub meta_type: U7,
     // length: var_length_int,
     pub data: Vec<u8>,
 }
@@ -136,6 +166,7 @@ pub struct MidiEventData {
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(tag = "type")]
 pub enum Message {
     NoteOff(NoteMessage), // 0x8_
     NoteOn(NoteMessage), // 0x9_
@@ -147,12 +178,11 @@ pub enum Message {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(tag = "type")]
 pub enum SystemEventData {
     TimeCode(TimeCodeData), // 0xF1
     SongPosition(SongPositionData), // 0xF2
     SongSelect(SongSelectData), // 0xF3
-    F4(SystemData), // 0xF4
-    F5(SystemData), // 0xF5
     TuneRequest, // 0xF6, no data
     // 0xF7: end of SysEx; only appears at end of SysEx data
     TimingClock, // 0xF8, no data
