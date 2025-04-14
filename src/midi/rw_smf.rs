@@ -417,9 +417,10 @@ fn write_smf_header<W: Write>(header: &FileHeader, writer: &mut W) -> Result<(),
 
 fn write_smf_track<W: Write>(track: &Track, writer: &mut W) -> Result<(), Error> {
     let mut events_buf = Vec::new();
+    let mut last_smf_event = None;
 
     for event in &track.events {
-        write_smf_event(event, &mut events_buf)?;
+        write_smf_event(event, &mut events_buf, &mut last_smf_event)?;
     }
 
     writer.write_all(b"MTrk")?;
@@ -429,69 +430,112 @@ fn write_smf_track<W: Write>(track: &Track, writer: &mut W) -> Result<(), Error>
     Ok(())
 }
 
-fn write_smf_event<W: Write>(event: &Event, writer: &mut W) -> Result<(), Error> {
+fn write_smf_event<W: Write>(event: &Event, writer: &mut W, last_smf_event: &mut Option<u8>) -> Result<(), Error> {
     write_variable_length_quantity(event.delta_time, writer)?;
     match &event.data {
         EventData::Midi(midi_event_data) => {
             match &midi_event_data.message {
                 Message::NoteOff(note_message) => {
+                    let this_event = 0x80 | u8::from(midi_event_data.channel);
                     let buf = [
-                        0x80 | u8::from(midi_event_data.channel),
+                        this_event,
                         note_message.note.into(),
                         note_message.value.into(),
                     ];
-                    writer.write_all(&buf)?;
+                    if Some(this_event) == *last_smf_event {
+                        writer.write_all(&buf[1..])?;
+                    } else {
+                        writer.write_all(&buf[..])?;
+                    }
+                    *last_smf_event = Some(this_event);
                 },
                 Message::NoteOn(note_message) => {
+                    let this_event = 0x90 | u8::from(midi_event_data.channel);
                     let buf = [
-                        0x90 | u8::from(midi_event_data.channel),
+                        this_event,
                         note_message.note.into(),
                         note_message.value.into(),
                     ];
-                    writer.write_all(&buf)?;
+                    if Some(this_event) == *last_smf_event {
+                        writer.write_all(&buf[1..])?;
+                    } else {
+                        writer.write_all(&buf[..])?;
+                    }
+                    *last_smf_event = Some(this_event);
                 },
                 Message::KeyPressure(note_message) => {
+                    let this_event = 0xA0 | u8::from(midi_event_data.channel);
                     let buf = [
-                        0xA0 | u8::from(midi_event_data.channel),
+                        this_event,
                         note_message.note.into(),
                         note_message.value.into(),
                     ];
-                    writer.write_all(&buf)?;
+                    if Some(this_event) == *last_smf_event {
+                        writer.write_all(&buf[1..])?;
+                    } else {
+                        writer.write_all(&buf[..])?;
+                    }
+                    *last_smf_event = Some(this_event);
                 },
                 Message::ControlChange(control_change_message) => {
+                    let this_event = 0xB0 | u8::from(midi_event_data.channel);
                     let buf = [
-                        0xB0 | u8::from(midi_event_data.channel),
+                        this_event,
                         control_change_message.control.into(),
                         control_change_message.value.into(),
                     ];
-                    writer.write_all(&buf)?;
+                    if Some(this_event) == *last_smf_event {
+                        writer.write_all(&buf[1..])?;
+                    } else {
+                        writer.write_all(&buf[..])?;
+                    }
+                    *last_smf_event = Some(this_event);
                 },
                 Message::ProgramChange(program_change_message) => {
+                    let this_event = 0xC0 | u8::from(midi_event_data.channel);
                     let buf = [
-                        0xC0 | u8::from(midi_event_data.channel),
+                        this_event,
                         program_change_message.program.into(),
                     ];
-                    writer.write_all(&buf)?;
+                    if Some(this_event) == *last_smf_event {
+                        writer.write_all(&buf[1..])?;
+                    } else {
+                        writer.write_all(&buf[..])?;
+                    }
+                    *last_smf_event = Some(this_event);
                 },
                 Message::ChannelPressure(channel_value_message) => {
+                    let this_event = 0xD0 | u8::from(midi_event_data.channel);
                     let buf = [
-                        0xD0 | u8::from(midi_event_data.channel),
+                        this_event,
                         channel_value_message.value.into(),
                     ];
-                    writer.write_all(&buf)?;
+                    if Some(this_event) == *last_smf_event {
+                        writer.write_all(&buf[1..])?;
+                    } else {
+                        writer.write_all(&buf[..])?;
+                    }
+                    *last_smf_event = Some(this_event);
                 },
                 Message::PitchBend(pitch_bend_message) => {
+                    let this_event = 0xE0 | u8::from(midi_event_data.channel);
                     let (lsb, msb) = pitch_bend_message.value.to_lsb_msb();
                     let buf = [
-                        0xE0 | u8::from(midi_event_data.channel),
+                        this_event,
                         lsb.into(),
                         msb.into(),
                     ];
-                    writer.write_all(&buf)?;
+                    if Some(this_event) == *last_smf_event {
+                        writer.write_all(&buf[1..])?;
+                    } else {
+                        writer.write_all(&buf[..])?;
+                    }
+                    *last_smf_event = Some(this_event);
                 },
             }
         },
         EventData::System(system_event_data) => {
+            *last_smf_event = None;
             match system_event_data {
                 SystemEventData::TimeCode(time_code_data) => {
                     let message_type = u8::from(time_code_data.message_type) << 4;
@@ -548,16 +592,19 @@ fn write_smf_event<W: Write>(event: &Event, writer: &mut W) -> Result<(), Error>
             }
         },
         EventData::SysEx(sys_ex_event_data) => {
+            *last_smf_event = None;
             writer.write_all(&[0xF0])?;
             write_variable_length_quantity(sys_ex_event_data.data.len().try_into().unwrap(), writer)?;
             writer.write_all(&sys_ex_event_data.data)?;
         },
         EventData::RawSysEx(sys_ex_event_data) => {
+            *last_smf_event = None;
             writer.write_all(&[0xF7])?;
             write_variable_length_quantity(sys_ex_event_data.data.len().try_into().unwrap(), writer)?;
             writer.write_all(&sys_ex_event_data.data)?;
         },
         EventData::Meta(meta_event_data) => {
+            *last_smf_event = None;
             let buf = [
                 0xFF,
                 meta_event_data.meta_type.into(),
