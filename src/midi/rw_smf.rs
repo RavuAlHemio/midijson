@@ -40,7 +40,7 @@ pub enum Error {
     ParameterHighBitSet,
     MoreLengthThanData,
     UnknownMessage { status_byte: u8 },
-    TrackCountMismatch { header: u16, file: usize }
+    TrackCountMismatch { header: u16, file: usize },
 }
 impl Error {
     ensure_func!(ensure_header_chunk, [u8; 4], UnexpectedHeaderChunk);
