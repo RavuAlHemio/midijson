@@ -37,6 +37,22 @@ macro_rules! define_subint {
                 value.0
             }
         }
+
+        impl TryFrom<u64> for $name {
+            type Error = u64;
+            fn try_from(value: u64) -> Result<Self, Self::Error> {
+                if value > $max_val {
+                    Err(value)
+                } else {
+                    Ok(Self(value as $subtype))
+                }
+            }
+        }
+        impl From<$name> for u64 {
+            fn from(value: $name) -> u64 {
+                <$subtype>::from(value).into()
+            }
+        }
     };
 }
 
@@ -612,5 +628,40 @@ impl PartialOrd for MetaType {
 impl Hash for MetaType {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.to_base_type().hash(state);
+    }
+}
+
+pub trait KnownMaxValue {
+    fn known_max_value() -> Self;
+}
+
+macro_rules! impl_primitive_max_value {
+    ($type:ty) => {
+        impl KnownMaxValue for $type {
+            fn known_max_value() -> Self { Self::MAX }
+        }
+    }
+}
+impl_primitive_max_value!(u8);
+impl_primitive_max_value!(u16);
+impl_primitive_max_value!(u32);
+impl KnownMaxValue for U3 {
+    fn known_max_value() -> Self {
+        U3::from_base_type(0b0111)
+    }
+}
+impl KnownMaxValue for U4 {
+    fn known_max_value() -> Self {
+        U4::from_base_type(0b1111)
+    }
+}
+impl KnownMaxValue for U7 {
+    fn known_max_value() -> Self {
+        U7::from_base_type(0b0111_1111)
+    }
+}
+impl KnownMaxValue for U14 {
+    fn known_max_value() -> Self {
+        U14::from_base_type(0b0011_1111_1111_1111)
     }
 }
